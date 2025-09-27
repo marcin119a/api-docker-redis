@@ -8,11 +8,13 @@ services:
     depends_on:
       - redis
 
-  worker:
-    build: ./worker
-    depends_on:
-      - redis
-
+worker:
+  build: ./worker
+  environment:
+    - HF_TOKEN=${HF_TOKEN}
+  depends_on:
+    - redis
+  
   redis:
     image: redis:6
     ports:
