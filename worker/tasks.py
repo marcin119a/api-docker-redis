@@ -8,7 +8,7 @@ celery = Celery(
 )
 
 # Ładowanie modelu tłumaczenia
-translator = pipeline("translation_en_to_pl", model="Helsinki-NLP/opus-mt-en-pl")
+translator = pipeline("translation_en_to_de")
 
 @celery.task(name="tasks.translate_text")
 def translate_text(text: str):
