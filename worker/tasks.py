@@ -1,4 +1,7 @@
 from celery import Celery
+import base64
+from pathlib import Path
+import tempfile
 from transformers import pipeline
 
 celery = Celery(
@@ -7,10 +10,21 @@ celery = Celery(
     backend="redis://redis:6379/0"
 )
 
-# Ładowanie modelu tłumaczenia
-translator = pipeline("translation_en_to_de")
+# Ładowanie modelu ASR Whisper Tiny
+transcriber = pipeline(
+    "automatic-speech-recognition",
+    model="openai/whisper-tiny"
+)
 
-@celery.task(name="tasks.translate_text")
-def translate_text(text: str):
-    result = translator(text)
-    return result[0]["translation_text"]
+@celery.task(name="tasks.transcribe_audio")
+def transcribe_audio(audio_b64: str):
+    audio_bytes = base64.b64decode(audio_b64)
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        tmp.write(audio_bytes)
+        tmp_path = Path(tmp.name)
+
+    try:
+        result = transcriber(str(tmp_path))
+        return result["text"]
+    finally:
+        tmp_path.unlink(missing_ok=True)

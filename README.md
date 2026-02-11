@@ -1,6 +1,6 @@
-# Fast Docker Redis 🚀
+# Gradio + Whisper Tiny + Celery + Redis 🚀
 
-Projekt wykorzystujący FastAPI, Celery, Redis i Docker do asynchronicznego tłumaczenia tekstu.
+Projekt wykorzystujacy Gradio, Celery, Redis i Docker do asynchronicznej transkrypcji audio (Whisper Tiny).
 
 ## Jak uruchomić?
 
@@ -10,34 +10,27 @@ Zbuduj i uruchom cały stack:
 docker-compose up --build
 ```
 
-## Użycie API
+## Uzycie aplikacji
 
-### Wyślij zapytanie o tłumaczenie:
-
-```bash
-curl -X POST http://localhost:8000/translate \
-     -H "Content-Type: application/json" \
-     -d '{"text": "Hello world"}'
-```
-
-→ Otrzymasz `{"task_id": "...", "status": "processing"}`
-
-### Pobierz wynik:
+Po uruchomieniu otworz:
 
 ```bash
-curl http://localhost:8000/result/<task_id>
+http://localhost:7860
 ```
 
-→ Otrzymasz np. `{"status": "done", "result": "Witaj świecie"}`
+W UI Gradio:
+- wrzuc plik audio,
+- kliknij submit,
+- odbierz transkrypcje wygenerowana przez model `openai/whisper-tiny`.
 
 ## Architektura
 
-- **API**: FastAPI serwer (port 8000)
-- **Worker**: Celery worker z modelem tłumaczenia
+- **UI**: Gradio serwer (port 7860)
+- **Worker**: Celery worker z modelem `openai/whisper-tiny`
 - **Redis**: Broker i backend dla Celery (port 6379)
 
 ## Komponenty
 
-- `api/` - FastAPI aplikacja
-- `worker/` - Celery worker z modelem Hugging Face
+- `api/` - aplikacja Gradio
+- `worker/` - Celery worker z modelem Whisper Tiny
 - `docker-compose.yml` - Konfiguracja całego stacku

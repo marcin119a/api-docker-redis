@@ -1,30 +1,44 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+import base64
+import time
+from pathlib import Path
 from celery import Celery
+import gradio as gr
 
-app = FastAPI()
-
-# Celery z Redisem
 celery = Celery(
     "tasks",
     broker="redis://redis:6379/0",
     backend="redis://redis:6379/0"
 )
 
-class TextIn(BaseModel):
-    text: str
+def transcribe(audio_path: str) -> str:
+    if not audio_path:
+        return "Brak pliku audio."
 
-@app.post("/translate")
-def translate(req: TextIn):
-    task = celery.send_task("tasks.translate_text", args=[req.text])
-    return {"task_id": task.id, "status": "processing"}
+    audio_bytes = Path(audio_path).read_bytes()
+    audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+    task = celery.send_task("tasks.transcribe_audio", args=[audio_b64])
 
-@app.get("/result/{task_id}")
-def get_result(task_id: str):
-    task = celery.AsyncResult(task_id)
-    if task.state == "PENDING":
-        return {"status": "pending"}
-    elif task.state == "SUCCESS":
-        return {"status": "done", "result": task.result}
-    else:
-        return {"status": task.state}
+    timeout_seconds = 180
+    start = time.time()
+    while time.time() - start < timeout_seconds:
+        result = celery.AsyncResult(task.id)
+        if result.state == "SUCCESS":
+            return str(result.result)
+        if result.state in {"FAILURE", "REVOKED"}:
+            return f"Blad zadania: {result.state}"
+        time.sleep(1)
+
+    return "Przekroczono czas oczekiwania na wynik."
+
+
+ui = gr.Interface(
+    fn=transcribe,
+    inputs=gr.Audio(type="filepath", label="Audio"),
+    outputs=gr.Textbox(label="Transkrypcja"),
+    title="Whisper Tiny Transcriber",
+    description="Wgraj plik audio, aby uzyskac transkrypcje przez Celery + Redis."
+)
+
+
+if __name__ == "__main__":
+    ui.launch(server_name="0.0.0.0", server_port=7860)
