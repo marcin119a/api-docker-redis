@@ -24,7 +24,7 @@ def transcribe_audio(audio_b64: str):
         tmp_path = Path(tmp.name)
 
     try:
-        result = transcriber(str(tmp_path))
+        result = transcriber(str(tmp_path), return_timestamps=True)
         return result["text"]
     finally:
         tmp_path.unlink(missing_ok=True)
